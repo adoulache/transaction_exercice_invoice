@@ -76,10 +76,36 @@ public class DAO {
 	 * taille
 	 * @throws java.lang.Exception si la transaction a échoué
 	 */
-	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities)
-		throws Exception {
-		throw new UnsupportedOperationException("Pas encore implémenté");
+	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities) throws Exception {
+            
+            String rqtInvoice = "INSERT INTO Invoice (customerID) VALUES (?)" ;
+            String rqtItem = "INSERT INTO Item VALUES(?, ?, ?, ?, (SELECT Price FROM product WHERE Product.ID = ?) )";
+            try (Connection connection = myDataSource.getConnection();) {
+                PreparedStatement addInvoice = connection.prepareStatement(rqtInvoice, Statement.RETURN_GENERATED_KEYS);
+                addInvoice.setInt(1, customer.getCustomerId());
+                addInvoice.executeUpdate();
+                System.out.println("Facture ajoutée avec succés !");
+                
+                /* Création d'une nouvelle ligne Item */
+                ResultSet res = addInvoice.getGeneratedKeys();
+                if (res.next()) {
+                    int invoiceID = res.getInt(1);
+                    for (int i = 0; i < productIDs.length; i++) {
+                       PreparedStatement addItem = connection.prepareStatement(rqtItem);
+                       addItem.setInt(1, invoiceID);
+                       addItem.setInt(2, i);
+                       addItem.setInt(3, productIDs[i]);
+                       addItem.setInt(4, quantities[i]);
+                       addItem.setInt(5, productIDs[i]);
+                       addItem.executeUpdate();
+                    }
+                }
+            }
+            catch (SQLException sqle) {
+                System.out.println("Pb select " + sqle.getMessage());
+            }
 	}
+
 
 	/**
 	 *
